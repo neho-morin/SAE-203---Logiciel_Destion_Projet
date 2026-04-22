@@ -20,7 +20,7 @@ CREATE TABLE Projet (
 );
 
 
-CREATE TABLE Tache (
+CREATE TABLE Tâche (
     id_tache TEXT PRIMARY KEY,
     description_tache TEXT,
     date_creation DATETIME,
