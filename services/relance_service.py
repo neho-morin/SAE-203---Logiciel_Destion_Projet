@@ -38,6 +38,36 @@ def already_sent_today(tache_id: int, type_: str) -> bool:
     return row is not None
 
 
+def send_manual_reminder(task_id: int) -> tuple[bool, str]:
+    """
+    Relance manuelle directe sur une tâche.
+    Envoie le mail (simulation ou réel selon settings) et enregistre l'historique.
+    Aucune déduplication — une relance manuelle est toujours autorisée.
+    Retourne (succès, message_utilisateur).
+    """
+    import services.task_service as task_service
+    import services.mail_service as mail_service
+    from config.settings import MAIL_SIMULATE
+
+    task = task_service.get_by_id(task_id)
+    if not task:
+        return False, "Tâche introuvable."
+
+    email = task.get("responsable_email") or ""
+    if not email:
+        return False, f"Aucun email pour la tâche « {task['titre']} »."
+
+    subject, body = mail_service.build_message(task, "manuel")
+    ok = mail_service.send(email, subject, body)
+
+    if ok:
+        mode = "Simulation" if MAIL_SIMULATE else "Réel"
+        masked = email[:3] + "***" + email[email.find("@"):] if "@" in email else email
+        log(task_id, task["titre"], masked, mode=mode, type_="manuel")
+
+    return ok, ("Relance envoyée." if ok else "Échec de l'envoi.")
+
+
 def get_tasks_needing_reminder() -> list[tuple[dict, str]]:
     """
     Retourne la liste des (tâche, type_relance) à traiter aujourd'hui.

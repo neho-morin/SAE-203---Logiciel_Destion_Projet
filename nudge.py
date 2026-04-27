@@ -18,6 +18,7 @@ import services.task_service as task_service
 import services.user_service as user_service
 import services.relance_service as relance_service
 import services.scheduler_service as scheduler_service
+import services.mail_service as mail_service
 
 # ── Couleurs ──────────────────────────────────────────────────────────────────
 BG         = "#f5f3ef"
@@ -96,7 +97,7 @@ def infer_statut(task):
 GLOBAL_STYLE = f"""
 QMainWindow, QWidget {{
     background-color: {BG};
-    font-family: 'Segoe UI', Arial, sans-serif;
+    font-family: 'Ubuntu', 'Noto Sans', 'DejaVu Sans', 'Segoe UI', Arial, sans-serif;
     font-size: 13px;
     color: {TEXT};
 }}
@@ -226,7 +227,7 @@ class DonutWidget(QWidget):
             span = int(-self.pct / 100 * 360 * 16)
             p.drawArc(cx - r, cy - r, r*2, r*2, 90 * 16, span)
         p.setPen(QColor(TEXT))
-        font = QFont("Segoe UI", 12, QFont.Weight.Bold)
+        font = QFont("DejaVu Sans", 12, QFont.Weight.Bold)
         p.setFont(font)
         p.drawText(0, 0, 100, 100, Qt.AlignmentFlag.AlignCenter, f"{self.pct}%")
 
@@ -240,7 +241,7 @@ class ProjectDialog(QDialog):
         lay = QVBoxLayout(self)
         lay.setSpacing(8)
 
-        title = QLabel("📁 " + ("Nouveau projet" if not project else "Modifier le projet"))
+        title = QLabel("Nouveau projet" if not project else "Modifier le projet")
         title.setStyleSheet(f"font-size: 15px; font-weight: 800; color: {TEXT};")
         lay.addWidget(title)
 
@@ -286,7 +287,7 @@ class ResponsableDialog(QDialog):
         self.setStyleSheet(GLOBAL_STYLE + input_style())
         lay = QVBoxLayout(self)
 
-        title = QLabel("👤 Nouveau responsable")
+        title = QLabel("Nouveau responsable")
         title.setStyleSheet(f"font-size: 15px; font-weight: 800;")
         lay.addWidget(title)
 
@@ -323,7 +324,7 @@ class TaskDialog(QDialog):
         lay = QVBoxLayout(self)
         lay.setSpacing(8)
 
-        title = QLabel("➕ " + ("Nouvelle tâche" if not task else "Modifier la tâche"))
+        title = QLabel("Nouvelle tâche" if not task else "Modifier la tâche")
         title.setStyleSheet(f"font-size: 15px; font-weight: 800;")
         lay.addWidget(title)
 
@@ -407,12 +408,12 @@ class RelanceDialog(QDialog):
         lay = QVBoxLayout(self)
         lay.setSpacing(8)
 
-        title = QLabel(f"📧 Relance — {task['titre']}")
+        title = QLabel(f"Relance — {task['titre']}")
         title.setStyleSheet(f"font-size: 15px; font-weight: 800;")
         lay.addWidget(title)
 
         # Mode simulation toggle
-        self.sim_btn = QPushButton("🔵 Mode : Simulation")
+        self.sim_btn = QPushButton("[ ] Simulation")
         self.sim_mode = True
         self.sim_btn.setStyleSheet(btn_style(INFO_L, INFO))
         self.sim_btn.clicked.connect(self.toggle_sim)
@@ -445,10 +446,10 @@ class RelanceDialog(QDialog):
     def toggle_sim(self):
         self.sim_mode = not self.sim_mode
         if self.sim_mode:
-            self.sim_btn.setText("🔵 Mode : Simulation")
+            self.sim_btn.setText("[ ] Simulation")
             self.sim_btn.setStyleSheet(btn_style(INFO_L, INFO))
         else:
-            self.sim_btn.setText("🟢 Mode : Réel (SMTP)")
+            self.sim_btn.setText("[X] SMTP reel")
             self.sim_btn.setStyleSheet(btn_style(ACCENT_L, ACCENT))
 
     def get_data(self):
@@ -470,15 +471,15 @@ class OnboardingDialog(QDialog):
         """)
         self.step = 0
         self.steps = [
-            ("📁", "Créez vos projets",
+            ("[P]", "Créez vos projets",
              "Organisez votre travail en projets distincts.\nChaque projet a ses tâches, responsables et échéances.",
-             "Exemple : Projet SAE, Stage, Projet Personnel…"),
-            ("✅", "Ajoutez vos tâches",
+             "Exemple : Projet SAE, Stage, Projet Personnel..."),
+            ("[T]", "Ajoutez vos tâches",
              "Créez des tâches avec responsable, priorité et échéance.\nL'app détecte automatiquement les retards.",
-             "Les tâches proches de l'échéance passent en « Terminée proche »."),
-            ("📧", "Relancez par mail",
+             "Les tâches proches de l'écheance passent en « Terminée proche »."),
+            ("[M]", "Relancez par mail",
              "Envoyez des relances en un clic.\nMode simulation disponible pour les démonstrations.",
-             "Le bouton « Relancer » cible automatiquement la première tâche en retard."),
+             "Le bouton « Relancer » permet de relancer la tâche sélectionnée."),
         ]
         self.main_layout = QVBoxLayout(self)
         self.main_layout.setContentsMargins(40, 30, 40, 30)
@@ -499,7 +500,7 @@ class OnboardingDialog(QDialog):
 
         # Logo
         logo_row = QHBoxLayout()
-        logo_lbl = QLabel("✳ NUDGE")
+        logo_lbl = QLabel("NUDGE")
         logo_lbl.setStyleSheet("color: white; font-size: 18px; font-weight: 800; letter-spacing: 2px;")
         logo_row.addStretch()
         logo_row.addWidget(logo_lbl)
@@ -548,7 +549,7 @@ class OnboardingDialog(QDialog):
         tip_frame = QFrame()
         tip_frame.setStyleSheet(f"background: {ACCENT_L}; border-radius: 10px; border: none;")
         tip_lay = QHBoxLayout(tip_frame)
-        tip_lbl = QLabel(f"💡  {tip}")
+        tip_lbl = QLabel(f">  {tip}")
         tip_lbl.setStyleSheet(f"font-size: 12px; color: {ACCENT}; font-weight: 600; border: none;")
         tip_lbl.setWordWrap(True)
         tip_lay.addWidget(tip_lbl)
@@ -556,7 +557,7 @@ class OnboardingDialog(QDialog):
 
         # Buttons
         btn_row = QHBoxLayout()
-        prev_btn = QPushButton("← Précédent")
+        prev_btn = QPushButton("< Precedent")
         prev_btn.setStyleSheet(btn_style(BORDER, TEXT))
         prev_btn.setEnabled(self.step > 0)
         prev_btn.clicked.connect(self.prev_step)
@@ -566,7 +567,7 @@ class OnboardingDialog(QDialog):
         step_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         is_last = self.step == len(self.steps) - 1
-        next_btn = QPushButton("Commencer 🚀" if is_last else "Suivant →")
+        next_btn = QPushButton("Commencer !" if is_last else "Suivant >")
         next_btn.setStyleSheet(btn_style())
         next_btn.clicked.connect(self.accept if is_last else self.next_step)
 
@@ -610,7 +611,7 @@ class Sidebar(QFrame):
         lay.setSpacing(4)
 
         # Logo (cliquable → accueil)
-        logo = QLabel("✳  Nudge")
+        logo = QLabel("Nudge")
         logo.setStyleSheet(f"""
             font-size: 15px; font-weight: 800; color: {TEXT};
             padding: 0 4px; letter-spacing: -0.3px;
@@ -707,7 +708,7 @@ class Sidebar(QFrame):
             fl = QVBoxLayout(frame)
             fl.setContentsMargins(8, 5, 8, 5)
             fl.setSpacing(1)
-            email_lbl = QLabel(f"✉ {h['email']}")
+            email_lbl = QLabel(f"@ {h['email']}")
             email_lbl.setStyleSheet(f"color: {MUTED}; font-size: 10px; border: none;")
             task_lbl  = QLabel(h["taskTitle"])
             task_lbl.setStyleSheet(f"font-weight: 700; font-size: 11px; border: none;")
@@ -735,8 +736,8 @@ class DashboardPanel(QFrame):
         # KPIs
         kpi_grid = QGridLayout()
         kpi_grid.setSpacing(7)
-        self.kpi_projects = KpiCard("📁", "Projets", 0)
-        self.kpi_tasks    = KpiCard("📋", "Tâches", 0)
+        self.kpi_projects = KpiCard(">>", "Projets", 0)
+        self.kpi_tasks    = KpiCard(">>", "Taches", 0)
         kpi_grid.addWidget(self.kpi_projects, 0, 0)
         kpi_grid.addWidget(self.kpi_tasks, 0, 1)
         lay.addLayout(kpi_grid)
@@ -911,7 +912,7 @@ class TaskDetailDialog(QDialog):
             lay.addWidget(sep3)
             lay.addWidget(prop_label(f"Relances envoyées ({len(linked)})"))
             for h in linked[:3]:
-                hl = QLabel(f"✉  {h['email']}  ·  {fmt_date(h['date'])}  ·  {h.get('mode','—')}")
+                hl = QLabel(f"@  {h['email']}  -  {fmt_date(h['date'])}  -  {h.get('mode','-')}")
                 hl.setStyleSheet(f"font-size: 11px; color: {MUTED}; background: {SURFACE2}; border-radius: 6px; padding: 5px 10px;")
                 lay.addWidget(hl)
 
@@ -919,7 +920,7 @@ class TaskDetailDialog(QDialog):
 
         # Buttons
         btn_row = QHBoxLayout()
-        edit_btn = QPushButton("✏️  Modifier")
+        edit_btn = QPushButton("Modifier")
         edit_btn.setStyleSheet(btn_style(BORDER, TEXT))
         edit_btn.clicked.connect(self.on_edit)
         close_btn = QPushButton("Fermer")
@@ -1027,7 +1028,7 @@ class TaskArea(QWidget):
         self.empty_widget = QWidget()
         empty_lay = QVBoxLayout(self.empty_widget)
         empty_lay.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        empty_icon = QLabel("✅")
+        empty_icon = QLabel("")
         empty_icon.setStyleSheet("font-size: 48px;")
         empty_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty_title = QLabel("Aucune tâche")
@@ -1051,7 +1052,7 @@ class TaskArea(QWidget):
         home_outer.setContentsMargins(0, 20, 0, 0)
         home_outer.setSpacing(20)
 
-        welcome = QLabel("Bonjour 👋 Quel projet aujourd'hui ?")
+        welcome = QLabel("Bonjour, quel projet aujourd'hui ?")
         welcome.setStyleSheet(f"font-size: 20px; font-weight: 800; color: {TEXT};")
         welcome.setAlignment(Qt.AlignmentFlag.AlignCenter)
         home_outer.addWidget(welcome)
@@ -1121,7 +1122,7 @@ class TaskArea(QWidget):
                 cl.setContentsMargins(16, 14, 16, 14)
                 cl.setSpacing(6)
 
-                icon_lbl = QLabel("📁")
+                icon_lbl = QLabel(">")
                 icon_lbl.setStyleSheet("font-size: 26px; border: none;")
                 name_lbl = QLabel(p["nom"])
                 name_lbl.setStyleSheet(f"font-size: 14px; font-weight: 800; color: {TEXT}; border: none;")
@@ -1130,10 +1131,10 @@ class TaskArea(QWidget):
                 tasks_lbl.setStyleSheet(f"font-size: 11px; color: {MUTED}; border: none;")
 
                 if retard > 0:
-                    retard_lbl = QLabel(f"⚠ {retard} en retard")
+                    retard_lbl = QLabel(f"[!] {retard} en retard")
                     retard_lbl.setStyleSheet(f"font-size: 11px; color: {DANGER}; font-weight: 700; border: none;")
                 else:
-                    retard_lbl = QLabel("✓ À jour")
+                    retard_lbl = QLabel("OK")
                     retard_lbl.setStyleSheet(f"font-size: 11px; color: {ACCENT}; font-weight: 700; border: none;")
 
                 for w in [icon_lbl, name_lbl, tasks_lbl, retard_lbl]:
@@ -1170,6 +1171,19 @@ class TaskArea(QWidget):
     def on_search(self, text):
         self.search_text = text
         self.refresh()
+
+    def get_selected_task(self):
+        """Retourne la tâche de la ligne sélectionnée, ou None si rien n'est sélectionné."""
+        if not self.active_project_id:
+            return None
+        row = self.table.currentRow()
+        if row < 0:
+            return None
+        proj_tasks = [t for t in tasks if t.get("project_id") == self.active_project_id]
+        filtered = [t for t in proj_tasks
+                    if (self.filter_statut == "Tous" or infer_statut(t) == self.filter_statut)
+                    and (not self.search_text or self.search_text.lower() in t["titre"].lower())]
+        return filtered[row] if row < len(filtered) else None
 
     def on_add_task(self):
         if not self.active_project_id:
@@ -1284,13 +1298,13 @@ class TaskArea(QWidget):
             act_lay.setContentsMargins(4, 2, 4, 2)
             act_lay.setSpacing(4)
 
-            edit_btn = QPushButton("✏️")
+            edit_btn = QPushButton("Ed.")
             edit_btn.setFixedSize(28, 26)
             edit_btn.setStyleSheet(btn_style(BORDER, TEXT))
             edit_btn.setToolTip("Modifier")
             edit_btn.clicked.connect(lambda _, t=task: self.on_edit_task(t))
 
-            del_btn = QPushButton("🗑")
+            del_btn = QPushButton("X")
             del_btn.setFixedSize(28, 26)
             del_btn.setStyleSheet(btn_style(DANGER_L, DANGER))
             del_btn.setToolTip("Supprimer")
@@ -1299,7 +1313,7 @@ class TaskArea(QWidget):
             act_lay.addWidget(edit_btn)
 
             if st == "En retard":
-                rel_btn = QPushButton("📧")
+                rel_btn = QPushButton("Mail")
                 rel_btn.setFixedSize(28, 26)
                 rel_btn.setStyleSheet(btn_style(DANGER_L, DANGER))
                 rel_btn.setToolTip("Relancer")
@@ -1364,16 +1378,34 @@ class TaskArea(QWidget):
             self.window().refresh_all()
 
     def on_relance(self, task):
+        if not task.get("responsable_id"):
+            QMessageBox.warning(self, "Relance", "Cette tâche n'a pas de responsable assigné.")
+            return
+
         dlg = RelanceDialog(task, parent=self)
-        if dlg.exec() == QDialog.DialogCode.Accepted:
-            data = dlg.get_data()
-            mode = "Simulation" if data["simulation"] else "Réel"
-            masked = data["email"][:3] + "***" + data["email"][data["email"].find("@"):] if "@" in data["email"] else data["email"]
-            relance_service.log(task["id"], task["titre"], masked, mode)
+        if dlg.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        data = dlg.get_data()
+        email = data["email"]
+        if not email:
+            QMessageBox.warning(self, "Relance", "Aucun email destinataire.")
+            return
+
+        simulate = data["simulation"]
+        subject, _ = mail_service.build_message(task, "manuel")
+        ok = mail_service.send(email, subject, data["message"], simulate=simulate)
+
+        if ok:
+            mode = "Simulation" if simulate else "Réel"
+            masked = email[:3] + "***" + email[email.find("@"):] if "@" in email else email
+            relance_service.log(task["id"], task["titre"], masked, mode=mode, type_="manuel")
             load_all()
-            msg = f"✅ Relance simulée pour {data['email']}" if data["simulation"] else f"📧 Mail envoyé à {data['email']}"
+            msg = f"Relance simulée pour {email}" if simulate else f"Mail envoyé a {email}"
             QMessageBox.information(self, "Relance", msg)
             self.window().refresh_all()
+        else:
+            QMessageBox.warning(self, "Relance", "L'envoi a échoué. Vérifiez la configuration SMTP.")
 
 # ── Main Window ───────────────────────────────────────────────────────────────
 class MainWindow(QMainWindow):
@@ -1418,7 +1450,7 @@ class MainWindow(QMainWindow):
         guide_btn.setStyleSheet(btn_style(BORDER, TEXT))
         guide_btn.clicked.connect(self.show_onboarding)
 
-        self.relance_btn = QPushButton("📧  Relancer par mail")
+        self.relance_btn = QPushButton("Relancer par mail")
         self.relance_btn.setStyleSheet(btn_style())
         self.relance_btn.clicked.connect(self.on_relance_global)
 
@@ -1505,11 +1537,14 @@ class MainWindow(QMainWindow):
             self.refresh_all()
 
     def on_relance_global(self):
-        en_retard = [t for t in tasks if infer_statut(t) == "En retard"]
-        if not en_retard:
-            QMessageBox.information(self, "Relance", "Aucune tâche en retard pour l'instant.")
+        task = self.task_area.get_selected_task()
+        if task is None:
+            QMessageBox.information(
+                self, "Relance manuelle",
+                "Sélectionnez d'abord une tâche dans la liste, puis cliquez sur « Relancer par mail »."
+            )
             return
-        self.task_area.on_relance(en_retard[0])
+        self.task_area.on_relance(task)
 
     def refresh_all(self):
         self.sidebar.refresh()
